@@ -1,4 +1,4 @@
-// Last update: 26062024 - Version 1.0
+// Last update: 26062024 - Version 1.0.0
 
 document.addEventListener("DOMContentLoaded", function() {
     const DebugLevels = {
