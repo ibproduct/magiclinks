@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", function() {
         DEBUG: 4
     };
 
-    let currentDebugLevel = DebugLevels.INFO;
+    let currentDebugLevel = DebugLevels.DEBUG;
 
     function log(level, ...args) {
         if (level <= currentDebugLevel) {
