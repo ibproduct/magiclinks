@@ -1,4 +1,4 @@
-// cdn_magic_links.js - Version 1.0.2
+// cdn_magic_links.js - Version 1.0.3
 
 document.addEventListener("DOMContentLoaded", function() {
     const DebugLevels = {
@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", function() {
         DEBUG: 4
     };
 
-    let currentDebugLevel = DebugLevels.DEBUG;
+    let currentDebugLevel = DebugLevels.INFO;
 
     function log(level, ...args) {
         if (level <= currentDebugLevel) {
@@ -35,6 +35,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function getEffectiveDimensions(element) {
         let width = 0;
+        let height = null;
         let currentElement = element;
 
         while (currentElement && width === 0) {
@@ -42,8 +43,19 @@ document.addEventListener("DOMContentLoaded", function() {
             currentElement = currentElement.parentElement;
         }
 
-        log(DebugLevels.DEBUG, `Effective width calculated: ${width}`);
-        return { width };
+        // Check for fixed height containers
+        currentElement = element;
+        while (currentElement && currentElement !== document.body) {
+            const computedStyle = window.getComputedStyle(currentElement);
+            if (computedStyle.height !== 'auto' && !computedStyle.height.includes('%')) {
+                height = parseInt(computedStyle.height, 10);
+                break;
+            }
+            currentElement = currentElement.parentElement;
+        }
+
+        log(DebugLevels.DEBUG, `Effective dimensions calculated - Width: ${width}, Height: ${height || 'auto'}`);
+        return { width, height };
     }
 
     function getBaseSizeTier(width) {
@@ -57,8 +69,8 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function getBestPracticeTransformations(img) {
-        const { width: effectiveWidth } = getEffectiveDimensions(img);
-        log(DebugLevels.DEBUG, `Effective width: ${effectiveWidth}`);
+        const { width: effectiveWidth, height: effectiveHeight } = getEffectiveDimensions(img);
+        log(DebugLevels.DEBUG, `Effective dimensions: ${effectiveWidth}x${effectiveHeight || 'auto'}`);
 
         const pixelRatio = window.devicePixelRatio || 1;
         const customQuality = img.getAttribute('data-quality') || '80';
@@ -68,13 +80,22 @@ document.addEventListener("DOMContentLoaded", function() {
         const baseSizeTier = getBaseSizeTier(cappedWidth);
         const size = Math.round(baseSizeTier * pixelRatio);
 
-        log(DebugLevels.DEBUG, `Image: ${img.alt}, Effective width: ${effectiveWidth}, Capped width: ${cappedWidth}, Pixel ratio: ${pixelRatio}, Base size tier: ${baseSizeTier}, Final size: ${size}`);
+        log(DebugLevels.DEBUG, `Image: ${img.alt}, Effective width: ${effectiveWidth}, Effective height: ${effectiveHeight || 'auto'}, Capped width: ${cappedWidth}, Pixel ratio: ${pixelRatio}, Base size tier: ${baseSizeTier}, Final size: ${size}`);
 
         const transformations = {
             ext: customFormat,
             size: size.toString(),
             quality: customQuality
         };
+
+        if (effectiveHeight && effectiveHeight > 100) { // Only apply crop if height is significant
+            const scaledHeight = Math.round(effectiveHeight * pixelRatio);
+            transformations.crop = `${size}x${scaledHeight}`;
+            transformations.cropgravity = 'auto';
+            log(DebugLevels.DEBUG, 'Crop applied:', transformations.crop);
+        } else {
+            log(DebugLevels.DEBUG, 'No crop applied');
+        }
 
         return transformations;
     }
